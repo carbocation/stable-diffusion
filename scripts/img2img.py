@@ -238,12 +238,7 @@ def main():
     grid_count = len(os.listdir(outpath)) - 1
 
     start_code = None
-    if opt.fixed_code:
-        # CPU creation allows reproducible seeding, whereas MPS does not, so
-        # create on CPU and move to device
-        start_code = torch.randn(
-            [opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device="cpu"
-        ).to(torch.device(device))
+    seed_increment_count = 0
 
     assert os.path.isfile(opt.init_img)
     init_image = load_img(opt.init_img).to(device)
@@ -265,6 +260,18 @@ def main():
                 tic = time.time()
                 all_samples = list()
                 for n in trange(opt.n_iter, desc="Sampling"):
+                    if opt.fixed_code:
+                        # Here we increment the seed so that if we like
+                        # iteration 300's results, we can just specify our
+                        # original seed + 300 for a future iteration.
+                        seed_everything(opt.seed + seed_increment_count)
+                        seed_increment_count += 1
+
+                        # Prevent iterations from being exactly the same by
+                        # regenerating the matrix with each iteration. CPU
+                        # creation allows reproducible seeding, whereas MPS does
+                        # not, so create on CPU and move to device
+                        start_code = torch.randn_like(init_latent, device="cpu").to(torch.device(device))
                     for prompts in tqdm(data, desc="data"):
                         uc = None
                         if opt.scale != 1.0:
@@ -273,8 +280,15 @@ def main():
                             prompts = list(prompts)
                         c = model.get_learned_conditioning(prompts)
 
-                        # encode (scaled latent)
-                        z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
+                        # encode (scaled latent) By specifying noise if we use
+                        # fixed_code, we can make output reproducible (via
+                        # @sugyan)
+                        z_enc = sampler.stochastic_encode(
+                            init_latent,
+                            torch.tensor([t_enc] * batch_size).to(device),
+                            noise=start_code,
+                        )
+
                         # decode it
                         samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
                                                  unconditional_conditioning=uc,)

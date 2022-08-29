@@ -238,16 +238,17 @@ def main():
 
     sample_path = os.path.join(outpath, "samples")
     os.makedirs(sample_path, exist_ok=True)
-    base_count = len(os.listdir(sample_path))
+
+    # The default scripts counts subfolders which we don't want. Use os.scandir
+    # to exclude them quickly.
+    base_count = 0
+    for entry in os.scandir(sample_path):
+        if not entry.is_dir():
+            base_count += 1
     grid_count = len(os.listdir(outpath)) - 1
 
     start_code = None
-    if opt.fixed_code:
-        # CPU creation allows reproducible seeding, whereas MPS does not, so
-        # create on CPU and move to device
-        start_code = torch.randn(
-            [opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device="cpu"
-        ).to(torch.device(device))
+    seed_increment_count = 0
 
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     if device.type == 'mps':
@@ -258,6 +259,20 @@ def main():
                 tic = time.time()
                 all_samples = list()
                 for n in trange(opt.n_iter, desc="Sampling"):
+                    if opt.fixed_code:
+                        # Here we increment the seed so that if we like
+                        # iteration 300's results, we can just specify our
+                        # original seed + 300 for a future iteration.
+                        seed_everything(opt.seed + seed_increment_count)
+                        seed_increment_count += 1
+
+                        # Prevent iterations from being exactly the same by
+                        # regenerating the matrix with each iteration. CPU
+                        # creation allows reproducible seeding, whereas MPS does
+                        # not, so create on CPU and move to device
+                        start_code = torch.randn(
+                            [opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device="cpu"
+                        ).to(torch.device(device))
                     for prompts in tqdm(data, desc="data"):
                         uc = None
                         if opt.scale != 1.0:
