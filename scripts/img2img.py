@@ -237,6 +237,14 @@ def main():
     base_count = len(os.listdir(sample_path))
     grid_count = len(os.listdir(outpath)) - 1
 
+    start_code = None
+    if opt.fixed_code:
+        # CPU creation allows reproducible seeding, whereas MPS does not, so
+        # create on CPU and move to device
+        start_code = torch.randn(
+            [opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device="cpu"
+        ).to(torch.device(device))
+
     assert os.path.isfile(opt.init_img)
     init_image = load_img(opt.init_img).to(device)
     init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)

@@ -243,7 +243,11 @@ def main():
 
     start_code = None
     if opt.fixed_code:
-        start_code = torch.randn([opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
+        # CPU creation allows reproducible seeding, whereas MPS does not, so
+        # create on CPU and move to device
+        start_code = torch.randn(
+            [opt.n_samples, opt.C, opt.H // opt.f, opt.W // opt.f], device="cpu"
+        ).to(torch.device(device))
 
     precision_scope = autocast if opt.precision=="autocast" else nullcontext
     if device.type == 'mps':
