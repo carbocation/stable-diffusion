@@ -1,9 +1,12 @@
 import argparse, os, sys, glob
+from random import sample
 import cv2
 import torch
 import numpy as np
 from omegaconf import OmegaConf
 from PIL import Image
+import piexif
+import piexif.helper
 from tqdm import tqdm, trange
 from imwatermark import WatermarkEncoder
 from itertools import islice
@@ -217,8 +220,10 @@ def main():
 
     if opt.plms:
         sampler = PLMSSampler(model)
+        sampler_name = "plms"
     else:
         sampler = DDIMSampler(model)
+        sampler_name = "ddim"
 
     os.makedirs(opt.outdir, exist_ok=True)
     outpath = opt.outdir
@@ -295,12 +300,22 @@ def main():
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
 
                         if not opt.skip_save:
-                            for x_sample in x_samples_ddim:
+                            for sample_id, x_sample in enumerate(x_samples_ddim):
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 img = Image.fromarray(x_sample.astype(np.uint8))
-                                img.save(os.path.join(sample_path, f"{base_count:05}.png"))
-                                base_count += 1
 
+                                # Keep track of our prompt and possibly seed (if
+                                # done in a reproducible way) within the image
+                                # metadata
+                                metadata = f"Prompt: {prompts[sample_id]}\nddim_steps: {opt.ddim_steps}\nSeed: {opt.seed + seed_increment_count - 1}\nSampler: {sampler_name}"
+                                user_comment = piexif.helper.UserComment.dump(metadata, encoding="unicode")
+                                exif_dict = {
+                                    "0th": {piexif.ImageIFD.Model: metadata},
+                                    "Exif": {piexif.ExifIFD.UserComment: user_comment},
+                                }
+                                exif_bytes = piexif.dump(exif_dict)
+                                img.save(os.path.join(sample_path, f"{base_count:05}.png"), exif=exif_bytes)
+                                base_count += 1
                         if not opt.skip_grid:
                             all_samples.append(x_samples_ddim)
 
