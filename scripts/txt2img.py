@@ -1,5 +1,6 @@
 import argparse, os, sys, glob
 from random import sample
+import random
 import cv2
 import torch
 import numpy as np
@@ -192,8 +193,8 @@ def main():
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
-        help="the seed (for reproducible sampling)",
+        default=None,
+        help="the seed (for reproducible sampling); if not set, will be chosen at random",
     )
     parser.add_argument(
         "--precision",
@@ -210,6 +211,9 @@ def main():
         opt.ckpt = "models/ldm/text2img-large/model.ckpt"
         opt.outdir = "outputs/txt2img-samples-laion400m"
 
+    # If user doesn't pick a global seed, we'll pick one randomly
+    if opt.seed is None:
+        opt.seed = random.randint(np.iinfo(np.uint32).min, np.iinfo(np.uint32).max)
     seed_everything(opt.seed)
 
     config = OmegaConf.load(f"{opt.config}")
