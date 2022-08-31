@@ -313,7 +313,7 @@ def main():
                                 # Keep track of our prompt and possibly seed (if
                                 # done in a reproducible way) within the image
                                 # metadata
-                                metadata = f"Base Image: {os.path.basename(opt.init_img)}\nPrompt: {prompts[sample_id]}\nddim_steps: {opt.ddim_steps}\nSeed: {opt.seed + seed_increment_count - 1}\nSampler: {sampler_name}"
+                                metadata = f"Base Image: {os.path.basename(opt.init_img)}\nPrompt: {prompts[sample_id]}\nddim_steps: {opt.ddim_steps}\nSeed: {opt.seed + seed_increment_count - 1}\nSampler: {sampler_name}\nStrength: {opt.strength}\nScale: {opt.scale}"
                                 user_comment = piexif.helper.UserComment.dump(metadata, encoding="unicode")
                                 exif_dict = {
                                     "0th": {piexif.ImageIFD.Model: metadata},
