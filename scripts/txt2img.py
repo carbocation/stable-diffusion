@@ -30,10 +30,6 @@ def get_device():
     else:
         return 'cpu'
 
-
-from transformers import AutoFeatureExtractor
-
-
 def chunk(it, size):
     it = iter(it)
     return iter(lambda: tuple(islice(it, size)), ())
