@@ -22,6 +22,8 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
+FORK_NAME="github.com/carbocation/stable-diffusion"
+
 def get_device():
     if(torch.cuda.is_available()):
         return 'cuda'
@@ -307,7 +309,7 @@ def main():
                                 # Keep track of our prompt and possibly seed (if
                                 # done in a reproducible way) within the image
                                 # metadata
-                                metadata = f"Prompt: {prompts[sample_id]}\nddim_steps: {opt.ddim_steps}\nSeed: {opt.seed + seed_increment_count - 1}\nSampler: {sampler_name}\nScale: {opt.scale}"
+                                metadata = f"Program: {FORK_NAME}\nPrompt: {prompts[sample_id]}\nddim_steps: {opt.ddim_steps}\nSeed: {opt.seed + seed_increment_count - 1}\nSampler: {sampler_name}\nScale: {opt.scale}"
                                 user_comment = piexif.helper.UserComment.dump(metadata, encoding="unicode")
                                 exif_dict = {
                                     "0th": {piexif.ImageIFD.Model: metadata},
